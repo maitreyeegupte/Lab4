@@ -1,0 +1,453 @@
+<Atlas_IoTDDL>
+	<Atlas_Thing>
+		<Descriptive_Metadata>
+			<Thing_ATID>MySmartThing01</Thing_ATID>
+			<Thing_Name></Thing_Name>
+			<Thing_Owner></Thing_Owner>
+			<Thing_Vendor></Thing_Vendor>
+			<Thing_Model></Thing_Model>
+			<Thing_ReleaseDate>8/2020</Thing_ReleaseDate>
+			<Thing_Type>Thing of Things</Thing_Type>
+			<Thing_OperatingSystem></Thing_OperatingSystem>
+			<Thing_ShortDescription></Thing_ShortDescription>
+			<LongDescription></LongDescription>
+			<Thing_SSID>MySmartSpace</Thing_SSID>
+			<Space_Coordinates></Space_Coordinates>
+			<Space_Name></Space_Name>
+			<Space_Description></Space_Description>
+			<Space_Constraints>
+				<Temperature>
+					<Lower_Bound></Lower_Bound>
+					<Upper_Bound></Upper_Bound>
+				</Temperature>
+				<Humidity>
+					<Lower_Bound></Lower_Bound>
+					<Upper_Bound></Upper_Bound>
+				</Humidity>
+				<Voltage>
+					<Lower_Bound></Lower_Bound>
+					<Upper_Bound></Upper_Bound>
+				</Voltage>
+				<Radio_Interference_Radius></Radio_Interference_Radius>
+				<Safe_Temperature_Radius></Safe_Temperature_Radius>
+			</Space_Constraints>
+		</Descriptive_Metadata>
+		<Administrative_Metadata>
+			<Network_Manager>
+				<Module></Module>
+				<Type></Type>
+				<Network_Name>MySpaceNetwork</Network_Name>
+				<Network_Passcode>MySpaceNetwork</Network_Passcode>
+				<MulticastGroup>
+					<IP>232.1.1.1</IP>
+					<Port>1235</Port>
+				</MulticastGroup>
+				<Communication_Protocol></Communication_Protocol>
+				<InterOperableCommunication>
+					<Broker>
+						<Vendor>HiveMQ</Vendor>
+						<Dashboard>http://www.mqtt-dashboard.com/</Dashboard>
+						<IP>broker.hivemq.com</IP>
+						<Port>1883</Port>
+					</Broker>
+					<Topic>
+						<Root>/Atlas</Root>
+						<Network_MQTTClient>/Network/MQTT_Client</Network_MQTTClient>
+						<Network_PrivateBroker>/Network/Private_Broker</Network_PrivateBroker>
+						<Multicast_ThingIdentity>/Multicast/Tweet_ThingIdentity</Multicast_ThingIdentity>
+						<Multicast_EntityIdentity>/Multicast/Tweet_EntityIdentity</Multicast_EntityIdentity>
+						<Multicast_API>/Multicast/API</Multicast_API>
+						<Unicast>/Unicast/Interaction</Unicast>
+					</Topic>
+				</InterOperableCommunication>
+				<OMA_DM>
+					<AccessName>Eclipse Leshan</AccessName>
+					<IP>coap://leshan.eclipseprojects.io</IP>
+					<Port>5683</Port>
+				</OMA_DM>
+			</Network_Manager>
+			<Memory_Manager>
+				<Store_Format></Store_Format>
+				<MemoryUnit_Application></MemoryUnit_Application>
+				<MemoryUnit_Knowledge></MemoryUnit_Knowledge>
+			</Memory_Manager>
+		</Administrative_Metadata>
+		<Thing_Attachment>
+
+		</Thing_Attachment>
+		<Structural_Metadata>
+			<Number_Hardware>2</Number_Hardware>
+			<Number_Software>0</Number_Software>
+			<Number_Hybrid>0</Number_Hybrid>
+			<Number_Entities>2</Number_Entities>
+		</Structural_Metadata>
+	</Atlas_Thing>
+	<Atlas_Entities>
+		<Entity_1>
+			<Descriptive_Metadata>
+				<ID>dht11_mg1996</ID>
+				<Name>dht11_temp_humid_sensor</Name>
+				<Owner></Owner>
+				<Vendor></Vendor>
+				<Category>Hardware</Category>
+				<Type>Connected</Type>
+				<Description>provides three services, reports back the temperature in fahrenheit, celsius and humidity</Description>
+			</Descriptive_Metadata>
+			<Services>
+				<Service_1>
+					<Name>Temp_Celsius_C</Name>
+					<AppCategory>Environment Monitor</AppCategory>
+					<Type>Report</Type>
+					<Keywords>heat,cold,temperature,report,celsius</Keywords>
+					<Description>reports back temperature in degree celsius</Description>
+					<Contextual_Constraints>
+						<Time_Window>30seconds</Time_Window>
+						<Usage_Mode>Single</Usage_Mode>
+						<Concurrent>No</Concurrent>
+					</Contextual_Constraints>
+					<Temporal_Constraints>
+						<Working>
+							<StartTime>12am</StartTime>
+							<EndTime>11:59 pm</EndTime>
+						</Working>
+						<Callable>
+							<StartTime>12am</StartTime>
+							<EndTime>11:59pm</EndTime>
+						</Callable>
+					</Temporal_Constraints>
+					<OutputDescription>temperature_celsius_value</OutputDescription>
+					<OutputType>int</OutputType>
+					<Service_Formula><![CDATA[
+// ~ Service body C/C++ code block ~
+// You can use the inputs you defined above by name
+// Any return values should match the specified output type
+
+#define DHTPIN 7
+#define MAXTIMINGS 85
+int dht11_dat[5] = { 0, 0, 0, 0, 0 };
+uint8_t laststate	= HIGH;
+uint8_t counter		= 0;
+uint8_t j		= 0, i;
+
+dht11_dat[0] = dht11_dat[1] = dht11_dat[2] = dht11_dat[3] = dht11_dat[4] = 0;
+
+wiringPiSetupGpio();
+
+//Perform pin state resetting
+pinMode(DHTPIN, OUTPUT);
+digitalWrite(DHTPIN, LOW);
+delay(18);
+
+digitalWrite(DHTPIN, HIGH);
+delayMicroseconds(40);
+
+pinMode(DHTPIN, INPUT);
+
+for (i = 0; i < MAXTIMINGS; i++) {
+	counter = 0;
+	while (digitalRead(DHTPIN) == laststate) {
+		counter++;
+		delayMicroseconds(1);
+		if (counter == 255) {
+			break;
+		}
+	}
+	laststate = digitalRead(DHTPIN);
+
+	if (counter == 255)
+		break;
+
+	//Ignore the first three transitions
+	if ((i >= 4) && (i % 2 == 0)) {
+		//Place the bits
+		dht11_dat[j / 8] <<= 1;
+		if (counter > 50)
+			dht11_dat[j / 8] |= 1;
+		j++;
+	}
+}
+
+//Verify the checksum (stored in index 4) is valid, and if so, return the right value
+if ((j >= 40) &&
+     (dht11_dat[4] == ((dht11_dat[0] + dht11_dat[1] + dht11_dat[2] + dht11_dat[3]) & 0xFF))) {
+	//Return the temp in celsius
+	temperature_celsius_value = dht11_dat[2] + 0.01*dht11_dat[3];
+}
+else {
+	temperature_celsius_value = 0;
+}
+
+if (temperature_celsius_value != 0) {
+	std::cout << "Temperature value: " << temperature_celsius_value << "°C" << std::endl;
+}
+]]></Service_Formula>
+					<Service_NumberInputs>0</Service_NumberInputs>
+					<Service_InputTypes></Service_InputTypes>
+					<Service_InputDescriptions></Service_InputDescriptions>
+				</Service_1>
+				<Service_2>
+					<Name>Analog_temp_F</Name>
+					<AppCategory>Environment Monitor</AppCategory>
+					<Type>Report</Type>
+					<Keywords>heat,cold,temperature,fahrenheit</Keywords>
+					<Description>reports back temperature in degree fahrenheit</Description>
+					<Contextual_Constraints>
+						<Time_Window>30seconds</Time_Window>
+						<Usage_Mode>Single</Usage_Mode>
+						<Concurrent>No</Concurrent>
+					</Contextual_Constraints>
+					<Temporal_Constraints>
+						<Working>
+							<StartTime>12am</StartTime>
+							<EndTime>11:59pm</EndTime>
+						</Working>
+						<Callable>
+							<StartTime>12am</StartTime>
+							<EndTime>11:59pm</EndTime>
+						</Callable>
+					</Temporal_Constraints>
+					<OutputDescription>temperature_fahrenheit_value</OutputDescription>
+					<OutputType>int</OutputType>
+					<Service_Formula><![CDATA[
+// ~ Service body C/C++ code block ~
+// You can use the inputs you defined above by name
+// Any return values should match the specified output type
+
+#define DHTPIN 7
+#define MAXTIMINGS 85
+int dht11_dat[5] = { 0, 0, 0, 0, 0 };
+uint8_t laststate	= HIGH;
+uint8_t counter		= 0;
+uint8_t j		= 0, i;
+
+dht11_dat[0] = dht11_dat[1] = dht11_dat[2] = dht11_dat[3] = dht11_dat[4] = 0;
+
+wiringPiSetupGpio();
+
+//Perform pin state resetting
+pinMode(DHTPIN, OUTPUT);
+digitalWrite(DHTPIN, LOW);
+delay(18);
+
+digitalWrite(DHTPIN, HIGH);
+delayMicroseconds(40);
+
+pinMode(DHTPIN, INPUT);
+
+for (i = 0; i < MAXTIMINGS; i++) {
+	counter = 0;
+	while (digitalRead(DHTPIN) == laststate) {
+		counter++;
+		delayMicroseconds(1);
+		if (counter == 255) {
+			break;
+		}
+	}
+	laststate = digitalRead(DHTPIN);
+
+	if (counter == 255)
+		break;
+
+	//Ignore the first three transitions
+	if ((i >= 4) && (i % 2 == 0)) {
+		//Place the bits
+		dht11_dat[j / 8] <<= 1;
+		if (counter > 50)
+			dht11_dat[j / 8] |= 1;
+		j++;
+	}
+}
+
+//Verify the checksum (stored in index 4) is valid, and if so, return the right value
+if ((j >= 40) &&
+     (dht11_dat[4] == ((dht11_dat[0] + dht11_dat[1] + dht11_dat[2] + dht11_dat[3]) & 0xFF))) {
+	//Return the temp in fahrenheit
+	temperature_fahrenheit_value = dht11_dat[2] * 9. / 5. + 32;
+}
+else {
+	temperature_fahrenheit_value = 0;
+}
+
+if (temperature_fahrenheit_value != 0) {
+	std::cout << "Temperature value: " << temperature_fahrenheit_value << "°F" << std::endl;
+}
+]]></Service_Formula>
+					<Service_NumberInputs>0</Service_NumberInputs>
+					<Service_InputTypes></Service_InputTypes>
+					<Service_InputDescriptions></Service_InputDescriptions>
+				</Service_2>
+				<Service_3>
+					<Name>Humidity_percentage</Name>
+					<AppCategory>Environment Monitor</AppCategory>
+					<Type>Report</Type>
+					<Keywords>humid,humidity</Keywords>
+					<Description>Reports back the environment humidity</Description>
+					<Contextual_Constraints>
+						<Time_Window>30seconds</Time_Window>
+						<Usage_Mode>Single</Usage_Mode>
+						<Concurrent>No</Concurrent>
+					</Contextual_Constraints>
+					<Temporal_Constraints>
+						<Working>
+							<StartTime>12am</StartTime>
+							<EndTime>11:59pm</EndTime>
+						</Working>
+						<Callable>
+							<StartTime>12am</StartTime>
+							<EndTime>11:59pm</EndTime>
+						</Callable>
+					</Temporal_Constraints>
+					<OutputDescription>humidity_value</OutputDescription>
+					<OutputType>int</OutputType>
+					<Service_Formula><![CDATA[
+// ~ Service body C/C++ code block ~
+// You can use the inputs you defined above by name
+// Any return values should match the specified output type
+#define DHTPIN 7
+#define MAXTIMINGS 85
+int dht11_dat[5] = { 0, 0, 0, 0, 0 };
+uint8_t laststate	= HIGH;
+uint8_t counter		= 0;
+uint8_t j		= 0, i;
+
+dht11_dat[0] = dht11_dat[1] = dht11_dat[2] = dht11_dat[3] = dht11_dat[4] = 0;
+
+wiringPiSetupGpio();
+
+//Perform pin state resetting
+pinMode(DHTPIN, OUTPUT);
+digitalWrite(DHTPIN, LOW);
+delay(18);
+
+digitalWrite(DHTPIN, HIGH);
+delayMicroseconds(40);
+
+pinMode(DHTPIN, INPUT);
+
+for (i = 0; i < MAXTIMINGS; i++) {
+	counter = 0;
+	while (digitalRead(DHTPIN) == laststate) {
+		counter++;
+		delayMicroseconds(1);
+		if (counter == 255) {
+			break;
+		}
+	}
+	laststate = digitalRead(DHTPIN);
+
+	if (counter == 255)
+		break;
+
+	//Ignore the first three transitions
+	if ((i >= 4) && (i % 2 == 0)) {
+		//Place the bits
+		dht11_dat[j / 8] <<= 1;
+		if (counter > 50)
+			dht11_dat[j / 8] |= 1;
+		j++;
+	}
+}
+
+//Verify the checksum (stored in index 4) is valid, and if so, return the right value
+if ((j >= 40) &&
+     (dht11_dat[4] == ((dht11_dat[0] + dht11_dat[1] + dht11_dat[2] + dht11_dat[3]) & 0xFF))) {
+	//Return the percent humidity
+	humidity_value = dht11_dat[0] + 0.01*dht11_dat[1];
+}
+else {
+	humidity_value = 0;
+}
+
+if (humidity_value != 0) {
+	std::cout << "Humidity value: " << humidity_value << "%" << std::endl;
+}
+
+]]></Service_Formula>
+					<Service_NumberInputs>0</Service_NumberInputs>
+					<Service_InputTypes></Service_InputTypes>
+					<Service_InputDescriptions></Service_InputDescriptions>
+				</Service_3>
+				<Number_Services>3</Number_Services>
+			</Services>
+			<Relationships>
+				<Relationship_1>
+					<Name></Name>
+					<Establisher></Establisher>
+					<Description></Description>
+					<type></type>
+					<Input1></Input1>
+					<Input2></Input2>
+				</Relationship_1>
+				<Number_Relationships>1</Number_Relationships>
+			</Relationships>
+			<UnboundedService>
+				<Number_UnboundedServices>0</Number_UnboundedServices>
+			</UnboundedService>
+		</Entity_1>
+		<Entity_2>
+			<Descriptive_Metadata>
+				<ID>ledButton1</ID>
+				<Name>led_button</Name>
+				<Owner></Owner>
+				<Vendor></Vendor>
+				<Category>Hardware</Category>
+				<Type>Connected</Type>
+				<Description>pressing the button, lights up the led</Description>
+			</Descriptive_Metadata>
+			<Services>
+				<Service_1>
+					<Name>ledButton</Name>
+					<AppCategory>Lighting</AppCategory>
+					<Type>Action</Type>
+					<Keywords>led,button,switch,press</Keywords>
+					<Description>pressing the button, lights up the led</Description>
+					<Contextual_Constraints>
+						<Time_Window>30seconds</Time_Window>
+						<Usage_Mode>Single</Usage_Mode>
+						<Concurrent>No</Concurrent>
+					</Contextual_Constraints>
+					<Temporal_Constraints>
+						<Working>
+							<StartTime>12am</StartTime>
+							<EndTime>11:59pm</EndTime>
+						</Working>
+						<Callable>
+							<StartTime>12am</StartTime>
+							<EndTime>11:59pm</EndTime>
+						</Callable>
+					</Temporal_Constraints>
+					<OutputDescription></OutputDescription>
+					<OutputType>void</OutputType>
+					<Service_Formula><![CDATA[
+// ~ Service body C/C++ code block ~
+// You can use the inputs you defined above by name
+// Any return values should match the specified output type
+wiringPiSetupGpio();
+pinMode(12, INPUT);
+pinMode(11, OUTPUT);
+while(buttonledl>0){
+	if(digitalRead(12) == HIGH){
+		digitalWrite(11, HIGH);
+		delay(buttonledl);
+		digitalWrite(11, LOW);
+		buttonledl = 0;
+	}
+}
+delay(1000);
+
+]]></Service_Formula>
+					<Service_NumberInputs>1</Service_NumberInputs>
+					<Service_InputTypes>int</Service_InputTypes>
+					<Service_InputDescriptions>"buttonledl"</Service_InputDescriptions>
+				</Service_1>
+				<Number_Services>1</Number_Services>
+			</Services>
+			<UnboundedService>
+				<Number_UnboundedServices>0</Number_UnboundedServices>
+			</UnboundedService>
+			<Relationships>
+				<Number_Relationships>0</Number_Relationships>
+			</Relationships>
+		</Entity_2>
+	</Atlas_Entities>
+</Atlas_IoTDDL>
