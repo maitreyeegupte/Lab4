@@ -8,6 +8,7 @@ print("Enter 1 for temperature in celsius")
 print("Enter 2 for temperature in fahrenheit")
 print("Enter 3 for  humidity")
 print("Enter 4 for Led and Button functionality")
+print("Enter 5 for servo dance")
 print("______________________________________________")
 val = input("Enter from the below option:")
 
@@ -36,8 +37,11 @@ while(True):
     data,address = sock.recvfrom(1024)
     parsed_data = json.loads(data)
     print(parsed_data['Tweet Type'])
-    #host = parsed_data['IP']
-    #port = parsed_data['Port']
+    try:
+        host = parsed_data['IP']
+        port = int(parsed_data['Port'])
+    except KeyError:
+        continue
 
     if val=='1':
         print("**********Temperature in Celsius***************")
@@ -87,6 +91,14 @@ while(True):
                 #ledButton = json.loads(data4)["Service Result"]
                 
             s4.close()
+    elif val=='5':
+        print("Two servos walk into a bus...")
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s5:
+            s5.connect((host,port))
+            message5 = b"{ \"Tweet Type\" : \"Service call\", \"Thing ID\" : \"asdf\", \"Space ID\" : \"GoalDiggers\", \"Service Name\" : \"Service1\", \"Service Inputs\" : \"(3000)\" }"
+            s5.sendall(message5)
+            data5 = str(s5.recv(2048), 'utf-8')
+            s5.close()
 
 
 
